@@ -17,7 +17,7 @@ import (
 )
 
 func (m *command) LoadStream(dispatcher dispatcher.Dispatcher) {
-	log := m.log.Named("start")
+	log := m.log.Named("stream")
 	defer log.Sugar().Info("Loaded")
 	dispatcher.AddHandler(
 		handlers.NewMessage(nil, sendLink),
