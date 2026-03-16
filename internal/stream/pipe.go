@@ -11,6 +11,7 @@ import (
 
 	"github.com/celestix/gotgproto"
 	"github.com/gotd/td/tg"
+	"github.com/gotd/td/tgerr"
 	"go.uber.org/zap"
 )
 
@@ -270,6 +271,23 @@ func (p *StreamPipe) downloadBlockWithRetry(offset int64) ([]byte, error) {
 		// don't retry on context cancellation
 		if p.ctx.Err() != nil {
 			return nil, p.ctx.Err()
+		}
+
+		// Handle Telegram FLOOD_WAIT
+		if rpcErr, ok := tgerr.As(err); ok && rpcErr.Type == "FLOOD_WAIT" {
+						wait := time.Duration(rpcErr.Argument) * time.Second
+
+						p.log.Warn("Telegram FLOOD_WAIT",
+										zap.Duration("wait", wait),
+										zap.Int("attempt", attempt),
+						)
+
+						select {
+						case <-time.After(wait):
+										continue
+						case <-p.ctx.Done():
+										return nil, p.ctx.Err()
+						}
 		}
 
 		// exponential backoff
